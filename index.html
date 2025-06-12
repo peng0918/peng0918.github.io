@@ -1,0 +1,569 @@
+/* 滾動指示器優化 */        
+        /* 響應式設計 */        @keyframes shimmer {
+            0%, 100% {
+                background-position: -200% center;
+            }
+            50% {
+                background-position: 200% center;
+            }
+        }<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE MOMENT - 街拍日誌</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .hero-section {
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #1a1a1a, #2d2d2d);
+        }
+
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Day13-1.p.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 1;
+            transition: opacity 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+
+
+        .hero-content {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            color: white;
+            animation: fadeInUp 1.5s ease-out;
+            transition: all 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .main-title {
+            font-size: clamp(2.5rem, 6vw, 6rem);
+            font-weight: 900;
+            letter-spacing: 0.2em;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            opacity: 0.9;
+            margin-bottom: 3rem;
+        }
+
+        /* 圖片檢視器 */
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backdrop-filter: blur(5px);
+        }
+
+        .image-viewer.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .image-viewer img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .image-viewer.active img {
+            transform: scale(1);
+        }
+
+        .image-viewer .close-hint {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            letter-spacing: 0.1em;
+            transition: opacity 0.3s ease;
+        }
+
+        .image-viewer:hover .close-hint {
+            opacity: 1;
+        }
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            opacity: 0.7;
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+        }
+
+        .scroll-indicator:hover {
+            opacity: 1;
+            transform: translateX(-50%) scale(1.1);
+        }
+
+        .scroll-arrow {
+            width: 2px;
+            height: 25px;
+            background: linear-gradient(to bottom, transparent, white, transparent);
+            margin: 0 auto 8px;
+            animation: scrollDown 2s infinite;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0%, 100% {
+                background-position: -200% center;
+            }
+            50% {
+                background-position: 200% center;
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+
+        @keyframes scrollDown {
+            0% {
+                height: 30px;
+                opacity: 1;
+            }
+            50% {
+                height: 20px;
+                opacity: 0.5;
+            }
+            100% {
+                height: 30px;
+                opacity: 1;
+            }
+        }
+
+        /* 黑色頁面區域 */
+        .black-section {
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%);
+            position: relative;
+            z-index: 1;
+            padding: 100px 40px;
+        }
+
+        /* 圖片畫廊樣式 */
+        .gallery-section {
+            margin-bottom: 80px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease-out forwards;
+        }
+
+        .gallery-section:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+
+        .gallery-section:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .gallery-four-columns {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .gallery-three-columns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .gallery-three-columns .image-item {
+            aspect-ratio: 4/5;
+        }
+
+        .image-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            aspect-ratio: 5/4;
+            background: linear-gradient(135deg, #111, #222);
+            transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+
+        .image-item:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 40px rgba(255, 255, 255, 0.1),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            filter: brightness(0.9) contrast(1.1);
+        }
+
+        .image-item:hover img {
+            transform: scale(1.1);
+            filter: brightness(0.4) contrast(1.2);
+        }
+
+        /* 圖片標題覆蓋層 */
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .image-item:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .image-title {
+            color: white;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            font-weight: 600;
+            text-align: center;
+            text-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(0, 0, 0, 0.5);
+            letter-spacing: 0.05em;
+            padding: 0 1rem;
+            transform: translateY(10px);
+            transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .image-item:hover .image-title {
+            transform: translateY(0);
+        }
+
+        /* 分隔線 */
+        .section-divider {
+            position: relative;
+            width: 200px;
+            height: 1px;
+            margin: 120px auto;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        }
+
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.6), transparent);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 10px rgba(255, 255, 255, 0.3),
+                0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .section-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 25%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+        }
+
+        .section-divider:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 25%;
+            transform: translate(50%, -50%);
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+        }
+        @media (max-width: 768px) {
+            .main-title {
+                letter-spacing: 0.1em;
+            }
+            
+            .subtitle {
+                padding: 0 1rem;
+            }
+        }
+
+        /* 如果圖片載入失敗的備用樣式 */
+        .hero-background.no-image {
+            background: linear-gradient(
+                135deg, 
+                #667eea 0%, 
+                #764ba2 100%
+            );
+        }
+    </style>
+</head>
+<body>
+    <section class="hero-section">
+        <div class="hero-background" id="heroBackground"></div>
+        
+        <div class="hero-content">
+            <h1 class="main-title">THE MOMENT</h1>
+            <p class="subtitle">街拍日誌 | Street Photography Journal</p>
+        </div>
+
+        <div class="scroll-indicator">
+            <div class="scroll-arrow"></div>
+            <span>Scroll</span>
+        </div>
+    </section>
+
+    <!-- 圖片檢視器 -->
+    <div class="image-viewer" id="imageViewer">
+        <div class="close-hint">點擊任意處關閉</div>
+        <img id="viewerImage" src="" alt="">
+    </div>
+
+    <!-- 黑色頁面區域 -->
+    <section class="black-section">
+        <!-- 四張一列的圖片區塊 -->
+        <div class="gallery-section">
+            <div class="gallery-four-columns">
+
+                <div class="image-item">
+                    <img src="Day11-1.p.jpg" alt="Day 11-1">
+                </div>
+                <div class="image-item">
+                    <img src="Day13-1.p.jpg" alt="Day 13-1">
+                </div>
+                <div class="image-item">
+                    <img src="Day13-3.p.jpg" alt="Day 13-3">
+                </div>
+                <div class="image-item">
+                    <img src="Day15-4.p.jpg" alt="Day 15-4">
+                </div>
+                <div class="image-item">
+                    <img src="Day15-8.p.jpg" alt="Day 15-8">
+                </div>
+
+                <div class="image-item">
+                    <img src="Day17-15.p.jpg" alt="Day 17-15">
+                </div>
+                <div class="image-item">
+                    <img src="Day23-4p.jpg" alt="Day 23-4">
+                </div>
+                <div class="image-item">
+                    <img src="Day27-4p.jpg" alt="Day 27-4">
+                </div>
+            </div>
+        </div>
+
+        <!-- 分隔線 -->
+        <div class="section-divider"></div>
+
+        <!-- 三張一列的圖片區塊 -->
+        <div class="gallery-section">
+            <div class="gallery-three-columns">
+                <div class="image-item">
+                    <img src="Day19-8.p.jpg" alt="Day 19-8">
+                    <div class="image-overlay">
+                        <div class="image-title">D19 粉紅午後</div>
+                    </div>
+                </div>
+                <div class="image-item">
+                    <img src="Day19-9.p.jpg" alt="Day 19-9">
+                    <div class="image-overlay">
+                        <div class="image-title">D19 邁向捷運</div>
+                    </div>
+                </div>
+                <div class="image-item">
+                    <img src="Day23-5p.jpg" alt="Day 23-5">
+                    <div class="image-overlay">
+                        <div class="image-title">D23 社牛老闆</div>
+                    </div>
+                </div>
+                <div class="image-item">
+                    <img src="Day24-3p.jpg" alt="Day 24-3">
+                    <div class="image-overlay">
+                        <div class="image-title">D24 匿名滑板客</div>
+                    </div>
+                </div>
+                <div class="image-item">
+                    <img src="Day28-1p.jpg" alt="Day 28-1">
+                    <div class="image-overlay">
+                        <div class="image-title">D28 傷心大安</div>
+                    </div>
+                </div>
+                <div class="image-item">
+                    <img src="Day7-6.p.jpg" alt="Day 7-6">
+                    <div class="image-overlay">
+                        <div class="image-title">D7 老友重逢</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // 檢查圖片是否能正常載入
+        const heroBackground = document.getElementById('heroBackground');
+        const img = new Image();
+        
+        img.onload = function() {
+            console.log('圖片載入成功');
+        };
+        
+        img.onerror = function() {
+            console.log('圖片載入失敗，使用備用樣式');
+            heroBackground.classList.add('no-image');
+        };
+        
+        img.src = 'Day13-1.p.jpg';
+
+        // 滾動指示器點擊事件
+        document.querySelector('.scroll-indicator').addEventListener('click', function() {
+            window.scrollTo({
+                top: window.innerHeight,
+                behavior: 'smooth'
+            });
+        });
+
+        // 視差滾動效果和淡化效果
+        window.addEventListener('scroll', function() {
+            const scrolled = window.pageYOffset;
+            const heroBackground = document.getElementById('heroBackground');
+            const heroContent = document.querySelector('.hero-content');
+            const windowHeight = window.innerHeight;
+            
+            // 使用更平滑的淡化曲線
+            const scrollProgress = Math.min(scrolled / (windowHeight * 0.8), 1);
+            const easeOutProgress = 1 - Math.pow(1 - scrollProgress, 3);
+            
+            if (heroBackground) {
+                // 視差效果
+                heroBackground.style.transform = `translateY(${scrolled * 0.5}px)`;
+                // 更絲滑的淡化效果
+                heroBackground.style.opacity = 1 - easeOutProgress;
+            }
+            
+            if (heroContent) {
+                // 內容淡化效果
+                heroContent.style.transform = `translateY(${scrolled * 0.3}px)`;
+                heroContent.style.opacity = 1 - easeOutProgress;
+            }
+        });
+
+        // 圖片檢視器功能
+        const imageViewer = document.getElementById('imageViewer');
+        const viewerImage = document.getElementById('viewerImage');
+        
+        // 為所有圖片添加點擊事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const galleryImages = document.querySelectorAll('.image-item img');
+            
+            galleryImages.forEach(img => {
+                img.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    viewerImage.src = this.src;
+                    viewerImage.alt = this.alt;
+                    imageViewer.classList.add('active');
+                    document.body.style.overflow = 'hidden'; // 防止背景滾動
+                });
+            });
+        });
+
+        // 點擊檢視器背景關閉
+        imageViewer.addEventListener('click', function(e) {
+            if (e.target === imageViewer || e.target.classList.contains('close-hint')) {
+                imageViewer.classList.remove('active');
+                document.body.style.overflow = 'auto'; // 恢復滾動
+            }
+        });
+
+        // ESC鍵關閉檢視器
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && imageViewer.classList.contains('active')) {
+                imageViewer.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    </script>
+</body>
+</html>
